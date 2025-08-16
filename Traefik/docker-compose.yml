@@ -26,6 +26,8 @@ services:
     environment:
       - TRAEFIK_LOG_LEVEL=INFO
     labels:
+      - "traefik.enable=true"
+
       # Dashboard через HTTPS с авторизацией
       - "traefik.http.routers.dashboard.rule=Host(`proxy.fiwa-gik.ru`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
