@@ -1,3 +1,4 @@
+---
 version: "3.8"
 
 networks:
@@ -19,7 +20,7 @@ services:
       - ./middlewares.yml:/etc/traefik/middlewares.yml:ro
       - ./acme.json:/acme.json:rw
       - ./logs:/var/log:rw
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       - traefik
     restart: unless-stopped
@@ -27,14 +28,14 @@ services:
       - TRAEFIK_LOG_LEVEL=INFO
     labels:
       - "traefik.enable=true"
-      
+
       # Dashboard через HTTPS с авторизацией
       - "traefik.http.routers.dashboard.rule=Host(`proxy.fiwa-gik.ru`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.middlewares=dashboardAuth@file,secureHeaders@file"
-      
+
       # Редирект HTTP -> HTTPS для dashboard
       - "traefik.http.routers.dashboard-http.rule=Host(`proxy.fiwa-gik.ru`)"
       - "traefik.http.routers.dashboard-http.entrypoints=web"
