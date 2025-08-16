@@ -1,30 +1,24 @@
 http:
   middlewares:
-    # === АВТОРИЗАЦИЯ ===
+    # АВТОРИЗАЦИЯ
     dashboardAuth:
       basicAuth:
         users:
-          # Генерируйте: htpasswd -nb admin yourpassword
-          - "admin:$apr1$7Dh6OSNK$YgqTWfCe90uqLANCo4/UG0"  # ЗАМЕНИТЕ на реальный хеш пароля
+          - "admin:$apr1$7Dh6OSNK$YgqTWfCe90uqLANCo4/UG0"
         realm: "Traefik Dashboard"
         removeHeader: true
 
-    # === БЕЗОПАСНОСТЬ ===
+    # БЕЗОПАСНОСТЬ
     secureHeaders:
       headers:
-        # Защита от XSS и clickjacking
         frameDeny: true
         contentTypeNosniff: true
         browserXssFilter: true
         referrerPolicy: "strict-origin-when-cross-origin"
-        
-        # HSTS (HTTP Strict Transport Security)
-        stsSeconds: 31536000  # 1 год
+        stsSeconds: 31536000
         stsIncludeSubdomains: true
         stsPreload: true
         forceSTSHeader: true
-        
-        # Кастомные заголовки
         customRequestHeaders:
           X-Forwarded-Proto: "https"
         customResponseHeaders:
@@ -33,11 +27,9 @@ http:
           X-Content-Type-Options: "nosniff"
           X-Frame-Options: "DENY"
           X-XSS-Protection: "1; mode=block"
-        
-        # Content Security Policy
         contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'"
-    
-    # Ограничение по IP для админских интерфейсов
+
+    # IP WHITELIST
     adminWhitelist:
       ipWhiteList:
         sourceRange:
@@ -45,13 +37,12 @@ http:
           - "10.0.0.0/8"
           - "172.16.0.0/12"
           - "192.168.0.0/16"
-          # - "YOUR.OFFICE.IP/32"  # Добавьте IP вашего офиса
-    
-    # === ПРОИЗВОДИТЕЛЬНОСТЬ ===
+
+    # КОМПРЕССИЯ
     compress:
       compress: {}
-    
-    # Базовый rate limiting
+
+    # RATE LIMITING
     rateLimit:
       rateLimit:
         burst: 100
@@ -60,8 +51,7 @@ http:
         sourceCriterion:
           ipStrategy:
             depth: 1
-    
-    # Строгий rate limiting для API
+
     rateLimitStrict:
       rateLimit:
         burst: 20
@@ -70,8 +60,8 @@ http:
         sourceCriterion:
           ipStrategy:
             depth: 1
-    
-    # === CORS ===
+
+    # CORS
     corsDefault:
       headers:
         accessControlAllowOriginList:
@@ -93,8 +83,7 @@ http:
         accessControlAllowCredentials: true
         accessControlMaxAge: 3600
         addVaryHeader: true
-    
-    # CORS для API (все поддомены fiwa-gik.ru)
+
     corsApi:
       headers:
         accessControlAllowOriginListRegex:
@@ -111,44 +100,43 @@ http:
         accessControlAllowCredentials: true
         accessControlMaxAge: 86400
         addVaryHeader: true
-    
-    # === РЕДИРЕКТЫ ===
+
+    # РЕДИРЕКТЫ
     redirectToHttps:
       redirectScheme:
         scheme: https
         permanent: true
         port: "443"
-    
-    # WWW редирект (опционально)
+
     redirectWww:
       redirectRegex:
         regex: "^https://www\\.(.+)"
         replacement: "https://${1}"
         permanent: true
-    
-    # === МИКРОСЕРВИСЫ ===
+
+    # ПРЕФИКСЫ
     stripApiPrefix:
       stripPrefix:
         prefixes:
           - "/api/v1"
           - "/api"
-    
+
     addApiPrefix:
       addPrefix:
         prefix: "/api/v1"
-    
-    # === ЗАЩИТА ОТ СБОЕВ ===
+
+    # ЗАЩИТА ОТ СБОЕВ
     circuitBreaker:
       circuitBreaker:
         expression: "NetworkErrorRatio() > 0.20 || ResponseCodeRatio(500, 600, 0, 600) > 0.25"
-    
-    # === RETRY ===
+
+    # RETRY
     retry:
       retry:
         attempts: 3
         initialInterval: "100ms"
-    
-    # === БУФЕРИЗАЦИЯ ===
+
+    # БУФЕРИЗАЦИЯ
     buffering:
       buffering:
         maxRequestBodyBytes: 2000000
