@@ -2,7 +2,7 @@ version: "3.8"
 
 networks:
   traefik:
-    external: false
+    external: true
     driver: bridge
 
 services:
