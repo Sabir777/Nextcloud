@@ -1,7 +1,7 @@
----
 http:
   middlewares:
-    # АВТОРИЗАЦИЯ
+
+    # 🔐 АВТОРИЗАЦИЯ DASHBOARD
     dashboardAuth:
       basicAuth:
         users:
@@ -9,7 +9,7 @@ http:
         realm: "Traefik Dashboard"
         removeHeader: true
 
-    # БЕЗОПАСНОСТЬ
+    # 🛡️ БЕЗОПАСНЫЕ ЗАГОЛОВКИ
     secureHeaders:
       headers:
         frameDeny: true
@@ -20,8 +20,6 @@ http:
         stsIncludeSubdomains: true
         stsPreload: true
         forceSTSHeader: true
-        customRequestHeaders:
-          X-Forwarded-Proto: "https"
         customResponseHeaders:
           Server: ""
           X-Powered-By: ""
@@ -33,7 +31,7 @@ http:
           style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;
           font-src 'self'; connect-src 'self'
 
-    # IP WHITELIST
+    # 🧱 IP WHITELIST
     adminWhitelist:
       ipWhiteList:
         sourceRange:
@@ -42,11 +40,11 @@ http:
           - "172.16.0.0/12"
           - "192.168.0.0/16"
 
-    # КОМПРЕССИЯ
+    # 📦 КОМПРЕССИЯ
     compress:
       compress: {}
 
-    # RATE LIMITING
+    # 🚦 RATE LIMITING
     rateLimit:
       rateLimit:
         burst: 100
@@ -65,7 +63,7 @@ http:
           ipStrategy:
             depth: 1
 
-    # CORS
+    # 🌐 CORS
     corsDefault:
       headers:
         accessControlAllowOriginList:
@@ -105,12 +103,11 @@ http:
         accessControlMaxAge: 86400
         addVaryHeader: true
 
-    # РЕДИРЕКТЫ
+    # 🔁 РЕДИРЕКТЫ
     redirectToHttps:
       redirectScheme:
         scheme: https
         permanent: true
-        port: "443"
 
     redirectWww:
       redirectRegex:
@@ -118,7 +115,7 @@ http:
         replacement: "https://${1}"
         permanent: true
 
-    # ПРЕФИКСЫ
+    # 🔧 ПРЕФИКСЫ
     stripApiPrefix:
       stripPrefix:
         prefixes:
@@ -129,20 +126,20 @@ http:
       addPrefix:
         prefix: "/api/v1"
 
-    # ЗАЩИТА ОТ СБОЕВ
+    # ⚠️ CIRCUIT BREAKER
     circuitBreaker:
       circuitBreaker:
         expression: >-
           NetworkErrorRatio() > 0.20 ||
           ResponseCodeRatio(500, 600, 0, 600) > 0.25
 
-    # RETRY
+    # 🔄 RETRY
     retry:
       retry:
         attempts: 3
         initialInterval: "100ms"
 
-    # БУФЕРИЗАЦИЯ
+    # 🧃 BUFFERING
     buffering:
       buffering:
         maxRequestBodyBytes: 2000000
