@@ -1,0 +1,19 @@
+# 1. Перейдите в директорию
+cd ~/Traefik
+
+# 2. Запустите скрипт подготовки
+chmod +x setup.sh
+./setup.sh
+
+# 3. ОБЯЗАТЕЛЬНО замените в файлах:
+# - traefik.yml: your-email@example.com → ваша почта
+# - middlewares.yml: admin:$2y$10$... → сгенерированный хеш
+
+# 4. Запустите Traefik
+docker-compose up -d
+
+# 5. Проверьте логи
+docker-compose logs -f traefik
+
+# 6. Проверьте доступность
+curl -I https://proxy.fiwa-gik.ru

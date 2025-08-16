@@ -1,0 +1,158 @@
+http:
+  middlewares:
+    # === АВТОРИЗАЦИЯ ===
+    dashboardAuth:
+      basicAuth:
+        users:
+          # Генерируйте: htpasswd -nb admin yourpassword
+          - "admin:$apr1$7Dh6OSNK$YgqTWfCe90uqLANCo4/UG0"  # ЗАМЕНИТЕ на реальный хеш пароля
+        realm: "Traefik Dashboard"
+        removeHeader: true
+
+    # === БЕЗОПАСНОСТЬ ===
+    secureHeaders:
+      headers:
+        # Защита от XSS и clickjacking
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        
+        # HSTS (HTTP Strict Transport Security)
+        stsSeconds: 31536000  # 1 год
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        
+        # Кастомные заголовки
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+        customResponseHeaders:
+          Server: ""
+          X-Powered-By: ""
+          X-Content-Type-Options: "nosniff"
+          X-Frame-Options: "DENY"
+          X-XSS-Protection: "1; mode=block"
+        
+        # Content Security Policy
+        contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'"
+    
+    # Ограничение по IP для админских интерфейсов
+    adminWhitelist:
+      ipWhiteList:
+        sourceRange:
+          - "127.0.0.1/32"
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+          # - "YOUR.OFFICE.IP/32"  # Добавьте IP вашего офиса
+    
+    # === ПРОИЗВОДИТЕЛЬНОСТЬ ===
+    compress:
+      compress: {}
+    
+    # Базовый rate limiting
+    rateLimit:
+      rateLimit:
+        burst: 100
+        average: 50
+        period: "1m"
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+    
+    # Строгий rate limiting для API
+    rateLimitStrict:
+      rateLimit:
+        burst: 20
+        average: 10
+        period: "1m"
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+    
+    # === CORS ===
+    corsDefault:
+      headers:
+        accessControlAllowOriginList:
+          - "https://www.fiwa-gik.ru"
+          - "https://cloud.fiwa-gik.ru"
+          - "https://proxy.fiwa-gik.ru"
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "Content-Type"
+          - "Authorization"
+          - "X-Requested-With"
+        accessControlExposeHeaders:
+          - "Content-Length"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 3600
+        addVaryHeader: true
+    
+    # CORS для API (все поддомены fiwa-gik.ru)
+    corsApi:
+      headers:
+        accessControlAllowOriginListRegex:
+          - "^https://.*\\.fiwa-gik\\.ru$"
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 86400
+        addVaryHeader: true
+    
+    # === РЕДИРЕКТЫ ===
+    redirectToHttps:
+      redirectScheme:
+        scheme: https
+        permanent: true
+        port: "443"
+    
+    # WWW редирект (опционально)
+    redirectWww:
+      redirectRegex:
+        regex: "^https://www\\.(.+)"
+        replacement: "https://${1}"
+        permanent: true
+    
+    # === МИКРОСЕРВИСЫ ===
+    stripApiPrefix:
+      stripPrefix:
+        prefixes:
+          - "/api/v1"
+          - "/api"
+    
+    addApiPrefix:
+      addPrefix:
+        prefix: "/api/v1"
+    
+    # === ЗАЩИТА ОТ СБОЕВ ===
+    circuitBreaker:
+      circuitBreaker:
+        expression: "NetworkErrorRatio() > 0.20 || ResponseCodeRatio(500, 600, 0, 600) > 0.25"
+    
+    # === RETRY ===
+    retry:
+      retry:
+        attempts: 3
+        initialInterval: "100ms"
+    
+    # === БУФЕРИЗАЦИЯ ===
+    buffering:
+      buffering:
+        maxRequestBodyBytes: 2000000
+        memRequestBodyBytes: 1000000
+        maxResponseBodyBytes: 10000000
+        memResponseBodyBytes: 2000000
+        retryExpression: "IsNetworkError() && Attempts() <= 2"

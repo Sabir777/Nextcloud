@@ -1,0 +1,85 @@
+api:
+  dashboard: true
+  insecure: false
+  debug: false
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entrypoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+    http:
+      middlewares:
+        - secureHeaders@file
+      tls:
+        options:
+          default:
+            minVersion: "VersionTLS12"
+            cipherSuites:
+              - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+              - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+              - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: traefik
+    watch: true
+  file:
+    filename: /etc/traefik/middlewares.yml
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      tlsChallenge: {}
+      email: ryabtsev.a.p@yandex.ru  # ЗАМЕНИТЕ на свою почту
+      storage: /acme.json
+      caServer: https://acme-v02.api.letsencrypt.org/directory
+      # Для тестирования используйте staging:
+      # caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+      keyType: EC256
+
+# Логирование для продакшна
+log:
+  level: WARN
+  filePath: "/var/log/traefik.log"
+  format: json
+
+accessLog:
+  filePath: "/var/log/access.log"
+  format: json
+  bufferingSize: 100
+  filters:
+    statusCodes:
+      - "400-499"
+      - "500-599"
+    retryAttempts: true
+    minDuration: "10ms"
+
+# Метрики для мониторинга
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+
+# Глобальные настройки
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+# Пинг для health check
+ping:
+  entryPoint: "websecure"

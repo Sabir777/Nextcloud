@@ -1,0 +1,9 @@
+~/Traefik/
+├── docker-compose.yml    # Основной файл Docker Compose
+├── traefik.yml          # Конфигурация Traefik
+├── middlewares.yml      # Все middleware (безопасность, CORS и т.д.)
+├── setup.sh            # Скрипт подготовки к запуску
+├── acme.json           # SSL сертификаты (создается автоматически)
+└── logs/               # Директория для логов (создается автоматически)
+    ├── traefik.log
+    └── access.log

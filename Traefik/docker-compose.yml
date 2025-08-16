@@ -1,0 +1,41 @@
+version: "3.8"
+
+networks:
+  traefik:
+    external: false
+    driver: bridge
+
+services:
+  traefik:
+    image: traefik:v2.12
+    container_name: traefik
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./middlewares.yml:/etc/traefik/middlewares.yml:ro
+      - ./acme.json:/acme.json:rw
+      - ./logs:/var/log:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - traefik
+    restart: unless-stopped
+    environment:
+      - TRAEFIK_LOG_LEVEL=INFO
+    labels:
+      - "traefik.enable=true"
+      
+      # Dashboard через HTTPS с авторизацией
+      - "traefik.http.routers.dashboard.rule=Host(`proxy.fiwa-gik.ru`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.middlewares=dashboardAuth@file,secureHeaders@file"
+      
+      # Редирект HTTP -> HTTPS для dashboard
+      - "traefik.http.routers.dashboard-http.rule=Host(`proxy.fiwa-gik.ru`)"
+      - "traefik.http.routers.dashboard-http.entrypoints=web"
+      - "traefik.http.routers.dashboard-http.middlewares=redirectToHttps@file"
