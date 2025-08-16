@@ -1,8 +1,10 @@
+# API конфигурация
 api:
   dashboard: true
   insecure: false
   debug: false
 
+# Точки входа
 entryPoints:
   web:
     address: ":80"
@@ -26,6 +28,7 @@ entryPoints:
               - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
               - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
 
+# Провайдеры
 providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
@@ -36,18 +39,17 @@ providers:
     filename: /etc/traefik/middlewares.yml
     watch: true
 
+# SSL сертификаты
 certificatesResolvers:
   letsencrypt:
     acme:
       tlsChallenge: {}
-      email: ryabtsev.a.p@yandex.ru  # ЗАМЕНИТЕ на свою почту
+      email: ryabtsev.a.p@yandex.ru
       storage: /acme.json
       caServer: https://acme-v02.api.letsencrypt.org/directory
-      # Для тестирования используйте staging:
-      # caServer: https://acme-staging-v02.api.letsencrypt.org/directory
       keyType: EC256
 
-# Логирование для продакшна
+# Логирование
 log:
   level: WARN
   filePath: "/var/log/traefik.log"
@@ -64,7 +66,7 @@ accessLog:
     retryAttempts: true
     minDuration: "10ms"
 
-# Метрики для мониторинга
+# Метрики
 metrics:
   prometheus:
     addEntryPointsLabels: true
@@ -80,6 +82,6 @@ global:
   checkNewVersion: false
   sendAnonymousUsage: false
 
-# Пинг для health check
+# Health check
 ping:
   entryPoint: "websecure"
