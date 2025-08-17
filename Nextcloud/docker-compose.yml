@@ -1,0 +1,163 @@
+version: "3.8"
+
+networks:
+  traefik:
+    external: true
+  nextcloud:
+    driver: bridge
+
+volumes:
+  nextcloud_data:
+    driver: local
+  db_data:
+    driver: local
+  redis_data:
+    driver: local
+
+services:
+  # 🗄️ DATABASE
+  nextcloud-db:
+    image: mariadb:11.5
+    container_name: nextcloud-db
+    restart: unless-stopped
+    networks:
+      - nextcloud
+    volumes:
+      - db_data:/var/lib/mysql
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    command: [
+      '--default-authentication-plugin=mysql_native_password',
+      '--innodb-buffer-pool-size=512M',
+      '--innodb-buffer-pool-instances=1',
+      '--innodb-flush-method=O_DIRECT',
+      '--innodb-log-file-size=128M',
+      '--innodb-log-buffer-size=32M',
+      '--query-cache-type=1',
+      '--query-cache-size=16M',
+      '--tmp-table-size=32M',
+      '--max-heap-table-size=32M',
+      '--max-connections=500',
+      '--thread-cache-size=50',
+      '--open-files-limit=65535',
+      '--table-open-cache=4000',
+      '--table-definition-cache=4000'
+    ]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # 🔴 REDIS CACHE
+  nextcloud-redis:
+    image: redis:7.4-alpine
+    container_name: nextcloud-redis
+    restart: unless-stopped
+    networks:
+      - nextcloud
+    volumes:
+      - redis_data:/data
+      - /etc/localtime:/etc/localtime:ro
+    command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ☁️ NEXTCLOUD
+  nextcloud:
+    image: nextcloud:29.0.16-apache
+    container_name: nextcloud
+    restart: unless-stopped
+    networks:
+      - traefik
+      - nextcloud
+    volumes:
+      - nextcloud_data:/var/www/html
+      - /etc/localtime:/etc/localtime:ro
+      - ./nextcloud/config:/var/www/html/config:rw
+      - ./nextcloud/data:/var/www/html/data:rw
+      - ./nextcloud/apps:/var/www/html/custom_apps:rw
+      - ./nextcloud/themes:/var/www/html/themes:rw
+    environment:
+      # Database
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_HOST: nextcloud-db
+      # Redis
+      REDIS_HOST: nextcloud-redis
+      REDIS_HOST_PASSWORD: ${REDIS_PASSWORD}
+      # NextCloud settings
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}
+      NEXTCLOUD_TRUSTED_DOMAINS: cloud.fiwa-gik.ru
+      OVERWRITEHOST: cloud.fiwa-gik.ru
+      OVERWRITEPROTOCOL: https
+      OVERWRITECLIURL: https://cloud.fiwa-gik.ru
+      OVERWRITEWEBROOT: ''
+      TRUSTED_PROXIES: traefik
+      # Apache settings
+      APACHE_DISABLE_REWRITE_IP: 1
+      # PHP settings
+      PHP_MEMORY_LIMIT: 512M
+      PHP_UPLOAD_LIMIT: 2G
+    depends_on:
+      nextcloud-db:
+        condition: service_healthy
+      nextcloud-redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      
+      # 🌐 MAIN ROUTER (HTTPS)
+      - "traefik.http.routers.nextcloud.rule=Host(`cloud.fiwa-gik.ru`)"
+      - "traefik.http.routers.nextcloud.entrypoints=websecure"
+      - "traefik.http.routers.nextcloud.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.nextcloud.service=nextcloud"
+      
+      # 🔄 HTTP to HTTPS redirect
+      - "traefik.http.routers.nextcloud-http.rule=Host(`cloud.fiwa-gik.ru`)"
+      - "traefik.http.routers.nextcloud-http.entrypoints=web"
+      - "traefik.http.routers.nextcloud-http.middlewares=redirectToHttps@file"
+      
+      # 🚀 SERVICE
+      - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
+      
+      # 🛡️ MIDDLEWARES
+      - "traefik.http.routers.nextcloud.middlewares=nextcloud-middlewares"
+      - "traefik.http.middlewares.nextcloud-middlewares.chain.middlewares=secureHeaders@file,nextcloud-dav,nextcloud-wellknown,compress@file"
+      
+      # 🔧 NEXTCLOUD SPECIFIC MIDDLEWARES
+      # WebDAV redirect
+      - "traefik.http.middlewares.nextcloud-dav.replacepathregex.regex=^/.well-known/(card|cal)dav"
+      - "traefik.http.middlewares.nextcloud-dav.replacepathregex.replacement=/remote.php/dav/"
+      
+      # Well-known redirects
+      - "traefik.http.middlewares.nextcloud-wellknown.replacepathregex.regex=^/.well-known/(.*)"
+      - "traefik.http.middlewares.nextcloud-wellknown.replacepathregex.replacement=/index.php/.well-known/$$1"
+
+  # 🔧 NEXTCLOUD CRON
+  nextcloud-cron:
+    image: nextcloud:29.0.16-apache
+    container_name: nextcloud-cron
+    restart: unless-stopped
+    networks:
+      - nextcloud
+    volumes:
+      - nextcloud_data:/var/www/html:rw
+      - ./nextcloud/config:/var/www/html/config:rw
+      - ./nextcloud/data:/var/www/html/data:rw
+      - ./nextcloud/apps:/var/www/html/custom_apps:rw
+      - /etc/localtime:/etc/localtime:ro
+    entrypoint: /cron.sh
+    depends_on:
+      - nextcloud-db
+      - nextcloud-redis
