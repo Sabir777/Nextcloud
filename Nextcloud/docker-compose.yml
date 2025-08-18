@@ -17,7 +17,7 @@ volumes:
 services:
   # 🗄️ DATABASE
   nextcloud-db:
-    image: mariadb:11.5
+    image: mariadb:11.4
     container_name: nextcloud-db
     restart: unless-stopped
     networks:
