@@ -73,7 +73,7 @@ services:
 
   # ☁️ NEXTCLOUD
   nextcloud:
-    image: nextcloud:29.0.16-apache
+    image: nextcloud:31.0.5-apache
     container_name: nextcloud
     restart: unless-stopped
     networks:
@@ -86,6 +86,8 @@ services:
       - ./nextcloud/data:/var/www/html/data:rw
       - ./nextcloud/apps:/var/www/html/custom_apps:rw
       - ./nextcloud/themes:/var/www/html/themes:rw
+      # ДОБАВЛЕНО: PHP настройки для OPcache
+      - ./nextcloud/php/opcache.ini:/usr/local/etc/php/conf.d/opcache.ini:ro
     environment:
       # Database
       MYSQL_DATABASE: nextcloud
@@ -106,9 +108,11 @@ services:
       TRUSTED_PROXIES: traefik
       # Apache settings
       APACHE_DISABLE_REWRITE_IP: 1
-      # PHP settings
+      # PHP settings (ОБНОВЛЕНО)
       PHP_MEMORY_LIMIT: 512M
       PHP_UPLOAD_LIMIT: 2G
+      # ДОБАВЛЕНО: PHP OPcache settings
+      PHP_INI_SCAN_DIR: /usr/local/etc/php/conf.d:/usr/local/etc/php/custom.d
     depends_on:
       nextcloud-db:
         condition: service_healthy
@@ -131,9 +135,14 @@ services:
       # 🚀 SERVICE
       - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
       
-      # 🛡️ MIDDLEWARES
+      # 🛡️ MIDDLEWARES (ОБНОВЛЕНО)
       - "traefik.http.routers.nextcloud.middlewares=nextcloud-middlewares"
-      - "traefik.http.middlewares.nextcloud-middlewares.chain.middlewares=secureHeaders@file,nextcloud-dav,nextcloud-wellknown,compress@file"
+      - "traefik.http.middlewares.nextcloud-middlewares.chain.middlewares=secureHeaders@file,nextcloud-headers,nextcloud-dav,nextcloud-wellknown,compress@file"
+      
+      # ДОБАВЛЕНО: Security headers
+      - "traefik.http.middlewares.nextcloud-headers.headers.customResponseHeaders.X-Frame-Options=SAMEORIGIN"
+      - "traefik.http.middlewares.nextcloud-headers.headers.customResponseHeaders.X-Content-Type-Options=nosniff"
+      - "traefik.http.middlewares.nextcloud-headers.headers.customResponseHeaders.X-XSS-Protection=1; mode=block"
       
       # 🔧 NEXTCLOUD SPECIFIC MIDDLEWARES
       # WebDAV redirect
@@ -144,9 +153,9 @@ services:
       - "traefik.http.middlewares.nextcloud-wellknown.replacepathregex.regex=^/.well-known/(.*)"
       - "traefik.http.middlewares.nextcloud-wellknown.replacepathregex.replacement=/index.php/.well-known/$$1"
 
-  # 🔧 NEXTCLOUD CRON
+  # 🔧 NEXTCLOUD CRON (ИСПРАВЛЕНО)
   nextcloud-cron:
-    image: nextcloud:29.0.16-apache
+    image: nextcloud:31.0.5-apache  # ✅ Синхронизировано с основным сервисом
     container_name: nextcloud-cron
     restart: unless-stopped
     networks:
@@ -157,6 +166,8 @@ services:
       - ./nextcloud/data:/var/www/html/data:rw
       - ./nextcloud/apps:/var/www/html/custom_apps:rw
       - /etc/localtime:/etc/localtime:ro
+      # ДОБАВЛЕНО: PHP настройки для cron тоже
+      - ./nextcloud/php/opcache.ini:/usr/local/etc/php/conf.d/opcache.ini:ro
     entrypoint: /cron.sh
     depends_on:
       - nextcloud-db
