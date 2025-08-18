@@ -12,7 +12,7 @@ http:
     # 🛡️ БЕЗОПАСНЫЕ ЗАГОЛОВКИ
     secureHeaders:
       headers:
-        frameDeny: true
+        frameDeny: false
         contentTypeNosniff: true
         browserXssFilter: true
         referrerPolicy: "strict-origin-when-cross-origin"
@@ -24,7 +24,7 @@ http:
           Server: ""
           X-Powered-By: ""
           X-Content-Type-Options: "nosniff"
-          X-Frame-Options: "DENY"
+          X-Frame-Options: "SAMEORIGIN"
           X-XSS-Protection: "1; mode=block"
         contentSecurityPolicy: >-
           default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval';
