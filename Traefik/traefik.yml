@@ -3,7 +3,6 @@ api:
   dashboard: true
   insecure: false
   debug: false
-
 # Точки входа
 entryPoints:
   web:
@@ -14,10 +13,8 @@ entryPoints:
           to: websecure
           scheme: https
           permanent: true
-
   websecure:
     address: ":443"
-
 # TLS параметры
 tls:
   options:
@@ -27,7 +24,6 @@ tls:
         - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
         - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
         - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
-
 # Провайдеры
 providers:
   docker:
@@ -38,7 +34,9 @@ providers:
   file:
     filename: /etc/traefik/middlewares.yml
     watch: true
-
+  file:
+    filename: /etc/traefik/nextcloud.yml    # ДОБАВЬТЕ ЭТУ СТРОКУ
+    watch: true
 # SSL сертификаты
 certificatesResolvers:
   letsencrypt:
@@ -48,13 +46,11 @@ certificatesResolvers:
       storage: /acme.json
       caServer: https://acme-v02.api.letsencrypt.org/directory
       keyType: EC256
-
 # Логирование
 log:
   level: WARN
   filePath: "/var/log/traefik.log"
   format: json
-
 accessLog:
   filePath: "/var/log/access.log"
   format: json
@@ -65,7 +61,6 @@ accessLog:
       - "500-599"
     retryAttempts: true
     minDuration: "10ms"
-
 # Метрики
 metrics:
   prometheus:
@@ -76,12 +71,10 @@ metrics:
       - 0.3
       - 1.2
       - 5.0
-
 # Глобальные настройки
 global:
   checkNewVersion: false
   sendAnonymousUsage: false
-
 # Health check
 ping:
   entryPoint: "websecure"

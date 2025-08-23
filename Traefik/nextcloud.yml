@@ -1,0 +1,49 @@
+# nextcloud.yml - Конфигурация Nextcloud для Traefik
+http:
+  routers:
+    # HTTPS маршрут для Nextcloud
+    nextcloud:
+      rule: "Host(`cloud.fiwa-gik.ru`)"
+      entryPoints:
+        - "websecure"
+      service: "nextcloud"
+      tls:
+        certResolver: "letsencrypt"
+      middlewares:
+        - "nextcloudHeaders"
+        - "compress@file"
+    
+    # HTTP редирект для Nextcloud
+    nextcloud-http:
+      rule: "Host(`cloud.fiwa-gik.ru`)"
+      entryPoints:
+        - "web"
+      middlewares:
+        - "redirectToHttps@file"
+
+  services:
+    # Сервис Nextcloud Apache
+    nextcloud:
+      loadBalancer:
+        servers:
+          - url: "http://nextcloud-aio-apache:11000"
+
+  middlewares:
+    # Специальные заголовки для Nextcloud
+    nextcloudHeaders:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+          X-Forwarded-Port: "443"
+          X-Forwarded-Host: "cloud.fiwa-gik.ru"
+          X-Real-IP: ""
+        customResponseHeaders:
+          # Nextcloud требует эти заголовки
+          X-Frame-Options: "SAMEORIGIN"
+          X-Content-Type-Options: "nosniff"
+          X-XSS-Protection: "1; mode=block"
+          X-Robots-Tag: "noindex, nofollow"
+          X-Download-Options: "noopen"
+          X-Permitted-Cross-Domain-Policies: "none"
+          Referrer-Policy: "no-referrer"
+          Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
