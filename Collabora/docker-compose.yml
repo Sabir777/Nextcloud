@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  collabora:
+    image: collabora/code:latest
+    container_name: collabora-office
+    restart: unless-stopped
+    
+    networks:
+      - traefik
+    
+    environment:
+      # Домен Nextcloud который будет обращаться к Collabora
+      - domain=${NEXTCLOUD_DOMAIN:-cloud\\.fiwa-gik\\.ru}
+      - username=${COLLABORA_ADMIN_USER:-admin}
+      - password=${COLLABORA_ADMIN_PASSWORD}
+      
+      # Полная конфигурация для продакшена
+      - "extra_params=--o:ssl.enable=false --o:ssl.termination=true --o:welcome.enable=false --o:user_interface.mode=notebookbar --o:logging.level=warning --o:home_mode.enable=true --o:remote_font_config.url=https://${NEXTCLOUD_DOMAIN_PLAIN:-cloud.fiwa-gik.ru}/apps/richdocuments/settings/fonts.json --o:mount_jail_tree=false --o:security.seccomp=true --o:net.post_allow.host[0]=.+"
+      
+      # Локализация
+      - LC_CTYPE=${LOCALE:-ru_RU.UTF-8}
+      - TZ=${TIMEZONE:-Europe/Moscow}
+      - dictionaries=${COLLABORA_DICTIONARIES:-ru en_US en_GB de_DE fr_FR es_ES}
+    
+    volumes:
+      - collabora_data:/opt/collabora/systemplate
+    
+    labels:
+      # Включить Traefik
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      
+      # HTTP роутер (редирект на HTTPS)
+      - "traefik.http.routers.collabora-http.rule=Host(`${COLLABORA_DOMAIN:-office.fiwa-gik.ru}`)"
+      - "traefik.http.routers.collabora-http.entrypoints=web"
+      - "traefik.http.routers.collabora-http.middlewares=https-redirect"
+      
+      # HTTPS роутер
+      - "traefik.http.routers.collabora-https.rule=Host(`${COLLABORA_DOMAIN:-office.fiwa-gik.ru}`)"
+      - "traefik.http.routers.collabora-https.entrypoints=websecure"
+      - "traefik.http.routers.collabora-https.tls=true"
+      - "traefik.http.routers.collabora-https.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.routers.collabora-https.middlewares=collabora-headers"
+      
+      # Сервис
+      - "traefik.http.services.collabora.loadbalancer.server.port=9980"
+      
+      # Middlewares
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.middlewares.collabora-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.collabora-headers.headers.customrequestheaders.X-Forwarded-Host=${COLLABORA_DOMAIN:-office.fiwa-gik.ru}"
+
+volumes:
+  collabora_data:
+
+networks:
+  traefik:
+    external: true

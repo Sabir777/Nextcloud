@@ -1,0 +1,37 @@
+# Collabora Environment Configuration
+
+# === ОСНОВНЫЕ ДОМЕНЫ ===
+# Домен на котором работает Collabora Online
+COLLABORA_DOMAIN=office.fiwa-gik.ru
+
+# Домен Nextcloud (экранированный для regex)
+NEXTCLOUD_DOMAIN=cloud\\.fiwa-gik\\.ru
+
+# Домен Nextcloud (обычный, для URL)
+NEXTCLOUD_DOMAIN_PLAIN=cloud.fiwa-gik.ru
+
+# === АДМИНИСТРАТОР COLLABORA ===
+# Логин администратора Collabora
+COLLABORA_ADMIN_USER=admin
+
+# Пароль администратора Collabora (ОБЯЗАТЕЛЬНО ИЗМЕНИТЕ!)
+COLLABORA_ADMIN_PASSWORD=CollaboraSecure2024!
+
+# === ЛОКАЛИЗАЦИЯ ===
+# Часовой пояс
+TIMEZONE=Europe/Moscow
+
+# Локаль
+LOCALE=ru_RU.UTF-8
+
+# Словари для проверки орфографии
+COLLABORA_DICTIONARIES=ru en_US en_GB de_DE fr_FR es_ES
+
+# === TRAEFIK ===
+# Резолвер сертификатов (должен совпадать с настройками Traefik)
+CERT_RESOLVER=letsencrypt
+
+# === ДОПОЛНИТЕЛЬНЫЕ ПАРАМЕТРЫ ===
+# Можно добавить дополнительные переменные по необходимости
+# COLLABORA_MAX_FILE_SIZE=100
+# COLLABORA_MEMORY_LIMIT=2048
