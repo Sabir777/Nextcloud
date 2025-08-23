@@ -32,10 +32,7 @@ providers:
     network: traefik
     watch: true
   file:
-    filename: /etc/traefik/middlewares.yml
-    watch: true
-  file:
-    filename: /etc/traefik/nextcloud.yml    # ДОБАВЬТЕ ЭТУ СТРОКУ
+    directory: /etc/traefik/
     watch: true
 # SSL сертификаты
 certificatesResolvers:
