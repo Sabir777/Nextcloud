@@ -12,10 +12,13 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      # Порты для TURN сервера
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
     volumes:
       - ./traefik.yml:/etc/traefik/traefik.yml:ro
       - ./middlewares.yml:/etc/traefik/middlewares.yml:ro
-      - ./nextcloud.yml:/etc/traefik/nextcloud.yml:ro    # ДОБАВЬТЕ ЭТУ СТРОКУ
+      - ./nextcloud.yml:/etc/traefik/nextcloud.yml:ro
       - ./acme.json:/acme.json:rw
       - ./logs:/var/log:rw
       - "/var/run/docker.sock:/var/run/docker.sock:ro"

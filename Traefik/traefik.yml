@@ -15,6 +15,11 @@ entryPoints:
           permanent: true
   websecure:
     address: ":443"
+  # TURN сервер для Nextcloud Talk
+  turn-tcp:
+    address: ":3478/tcp"
+  turn-udp:
+    address: ":3478/udp"
 # TLS параметры
 tls:
   options:
