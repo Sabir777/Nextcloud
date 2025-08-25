@@ -2,7 +2,8 @@
 mkdir -p coturn talk-signaling redis nats janus
 
 # 1. coturn/turnserver.conf
-cat > coturn/turnserver.conf << 'EOF'
+cat > coturn/turnserver.conf << EOF
+# Основные порты
 listening-port=3478
 tls-listening-port=5349
 
@@ -10,31 +11,56 @@ tls-listening-port=5349
 min-port=49152
 max-port=49172
 
-# Включить verbose логи (отключите в продакшене)
-verbose
-
-# Имя сервера (замените на ваш домен)
+# Имя сервера
 server-name=turn.fiwa-gik.ru
 realm=fiwa-gik.ru
 
 # Включить долгосрочные credentials
 use-auth-secret
-static-auth-secret=ВАША_СЕКРЕТНАЯ_СТРОКА_ЗАМЕНИТЕ_ЭТО
+static-auth-secret="$(openssl rand -base64 48)"
 
-# Запретить loopback адреса
+# Запретить loopback и multicast
 no-loopback-peers
 no-multicast-peers
 
 # Включить fingerprint
 fingerprint
 
-# Certificats (пути к сертификатам от Let's Encrypt через Traefik)
-cert=/etc/letsencrypt/live/turn.fiwa-gik.ru/fullchain.pem
-pkey=/etc/letsencrypt/live/turn.fiwa-gik.ru/privkey.pem
+# ПРОБЛЕМА: В Docker контейнере нет доступа к сертификатам Traefik
+# Нужно либо пробросить сертификаты, либо отключить TLS и доверить Traefik
+# ВАРИАНТ 1: Отключить TLS в coturn (рекомендуется с Traefik)
+no-tls
+no-dtls
 
-# Логирование
+# ВАРИАНТ 2: Если хотите TLS в coturn, нужно пробросить сертификаты
+# cert=/etc/ssl/certs/fullchain.pem
+# pkey=/etc/ssl/private/privkey.pem
+
+# Безопасность
+no-cli
+no-stdout-log
+
+# Логирование (stdout для Docker)
 log-file=stdout
-syslog
+# Убрать syslog в Docker
+# syslog
+
+# Дополнительные настройки безопасности
+denied-peer-ip=10.0.0.0-10.255.255.255
+denied-peer-ip=192.168.0.0-192.168.255.255
+denied-peer-ip=172.16.0.0-172.31.255.255
+
+# Ограничения
+max-bps=1000000
+total-quota=100
+user-quota=50
+
+# База данных пользователей (для статической авторизации)
+# userdb=/var/lib/turn/turndb
+
+# Опции для WebRTC
+mobility
+# stale-nonce=600
 EOF
 
 # 2. talk-signaling/server.conf  
