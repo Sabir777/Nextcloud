@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  coturn:
+    image: coturn/coturn:latest
+    container_name: coturn
+    restart: always
+    ports:
+      - "3478:3478"
+      - "3478:3478/udp"
+      - "49152-65535:49152-65535/udp"
+    volumes:
+      - ./turnserver.conf:/etc/turnserver.conf
+      - ./certs:/etc/coturn/certs
+    environment:
+      - TZ=Europe/Moscow
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
