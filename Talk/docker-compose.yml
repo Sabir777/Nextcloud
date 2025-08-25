@@ -1,0 +1,162 @@
+version: '3.8'
+
+services:
+  # TURN сервер (coturn) для WebRTC соединений
+  coturn:
+    image: coturn/coturn:latest
+    container_name: talk-coturn
+    restart: unless-stopped
+    
+    networks:
+      - traefik
+    
+    ports:
+      # TURN/STUN порты (пробросить напрямую, без Traefik)
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+      - "5349:5349/tcp"   # TLS порт (если понадобится)
+      - "5349:5349/udp"
+      # Диапазон портов для media relay
+      - "49152-49172:49152-49172/udp"
+      
+      volumes:
+        - ./coturn/turnserver.conf:/etc/turnserver.conf:ro
+        - coturn_data:/var/lib/turn
+      
+      environment:
+        - TZ=${TIMEZONE:-Europe/Moscow}
+      
+      # УБРАТЬ labels для Traefik - TURN работает напрямую
+      # labels: не нужны для TURN сервера
+
+  # Signaling сервер Nextcloud Talk (HPB - High Performance Backend)
+  talk-signaling:
+    image: nextcloud/talk-signaling:latest
+    container_name: talk-signaling
+    restart: unless-stopped
+    
+    networks:
+      - traefik
+    
+    depends_on:
+      - redis-talk
+      - nats
+    
+    volumes:
+      - ./talk-signaling/server.conf:/config/server.conf:ro
+      - talk_signaling_data:/data
+    
+    environment:
+      - TZ=${TIMEZONE:-Europe/Moscow}
+      - CONFIG_FILE=/config/server.conf
+    
+    labels:
+      # Включить Traefik
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      
+      # HTTP роутер (редирект на HTTPS)
+      - "traefik.http.routers.talk-signaling-http.rule=Host(`${TALK_SIGNALING_DOMAIN:-signaling.fiwa-gik.ru}`)"
+      - "traefik.http.routers.talk-signaling-http.entrypoints=web"
+      - "traefik.http.routers.talk-signaling-http.middlewares=https-redirect"
+      
+      # HTTPS роутер
+      - "traefik.http.routers.talk-signaling-https.rule=Host(`${TALK_SIGNALING_DOMAIN:-signaling.fiwa-gik.ru}`)"
+      - "traefik.http.routers.talk-signaling-https.entrypoints=websecure"
+      - "traefik.http.routers.talk-signaling-https.tls=true"
+      - "traefik.http.routers.talk-signaling-https.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.routers.talk-signaling-https.middlewares=talk-headers"
+      
+      # Сервис
+      - "traefik.http.services.talk-signaling.loadbalancer.server.port=8080"
+      
+      # WebSocket поддержка
+      - "traefik.http.middlewares.talk-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.talk-headers.headers.customrequestheaders.X-Forwarded-Host=${TALK_SIGNALING_DOMAIN:-signaling.fiwa-gik.ru}"
+      - "traefik.http.middlewares.talk-headers.headers.customrequestheaders.Upgrade=websocket"
+      - "traefik.http.middlewares.talk-headers.headers.customrequestheaders.Connection=Upgrade"
+
+  # Redis для кэширования сессий
+  redis-talk:
+    image: redis:7-alpine
+    container_name: talk-redis
+    restart: unless-stopped
+    
+    networks:
+      - traefik
+    
+    volumes:
+      - redis_talk_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    
+    command: redis-server /usr/local/etc/redis/redis.conf
+    
+    environment:
+      - TZ=${TIMEZONE:-Europe/Moscow}
+
+  # NATS для внутренней коммуникации
+  nats:
+    image: nats:2-alpine
+    container_name: talk-nats
+    restart: unless-stopped
+    
+    networks:
+      - traefik
+    
+    volumes:
+      - nats_data:/data
+      - ./nats/nats.conf:/etc/nats/nats.conf:ro
+    
+    command: ["-c", "/etc/nats/nats.conf"]
+    
+    environment:
+      - TZ=${TIMEZONE:-Europe/Moscow}
+    
+    ports:
+      - "4222:4222" # NATS client port
+
+  # Janus WebRTC Gateway (альтернативный вариант)
+  janus:
+    image: canyan/janus-gateway:latest
+    container_name: talk-janus
+    restart: unless-stopped
+    
+    networks:
+      - traefik
+    
+    ports:
+      # Janus порты
+      - "8088:8088/tcp"  # HTTP
+      - "8089:8089/tcp"  # HTTPS
+      - "8188:8188/tcp"  # WebSocket
+      - "20000-20020:20000-20020/udp" # RTP ports
+    
+    volumes:
+      - ./janus:/opt/janus/etc/janus:ro
+      - janus_data:/opt/janus/share/janus
+    
+    environment:
+      - TZ=${TIMEZONE:-Europe/Moscow}
+    
+    labels:
+      # Включить Traefik
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      
+      # WebSocket роутер для Janus
+      - "traefik.http.routers.janus-ws.rule=Host(`${JANUS_DOMAIN:-janus.fiwa-gik.ru}`) && PathPrefix(`/janus`)"
+      - "traefik.http.routers.janus-ws.entrypoints=websecure"
+      - "traefik.http.routers.janus-ws.tls=true"
+      - "traefik.http.routers.janus-ws.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.services.janus-ws.loadbalancer.server.port=8188"
+
+volumes:
+  coturn_data:
+  talk_signaling_data:
+  redis_talk_data:
+  nats_data:
+  janus_data:
+
+networks:
+  traefik:
+    external: true
