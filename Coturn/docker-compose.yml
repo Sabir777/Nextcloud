@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  coturn:
+    image: instrumentisto/coturn
+    container_name: coturn
+    restart: always
+    ports:
+      - "3478:3478"
+      - "3478:3478/udp"
+      - "5349:5349"
+      - "5349:5349/udp"
+    volumes:
+      - ./turnserver.conf:/etc/turnserver.conf:ro
+      - /etc/letsencrypt/live/turn.fiwa-gik.ru:/etc/letsencrypt/live/turn.fiwa-gik.ru:ro
+    command: ["turnserver", "-c", "/etc/turnserver.conf"]
